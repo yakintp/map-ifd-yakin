@@ -75,13 +75,12 @@ select, input {
     gap: 10px;
 }
 
-/* ✅ LEGEND AMÉLIORÉE */
 .legend { 
     background: white; 
     padding: 10px; 
     border-radius: 8px; 
     box-shadow: 0 0 5px rgba(0,0,0,0.3); 
-    line-height: 20px; 
+    line-height: 24px; 
     max-height: 500px; 
     overflow-y: auto; 
     width: 280px; 
@@ -90,25 +89,22 @@ select, input {
 
 /* TITRE */
 .legend b.title { 
-    font-size: 14px; 
+    font-size: 15px; 
     display: block; 
-    margin-bottom: 10px; 
+    margin-bottom: 8px; 
     border-bottom: 2px solid #eee; 
     color: red; 
 }
 
-/* ✅ ALIGNEMENT PROPRE + TAILLE UNIFORME */
+/* LIGNE FOURNISSEUR */
 .legend span { 
     cursor: pointer; 
     display: flex; 
     align-items: center; 
     gap: 10px; 
-    padding: 6px 6px; 
-    border-radius: 5px; 
+    padding: 4px 6px; 
+    border-radius: 4px; 
     font-weight: 600; 
-    font-size: 12px;
-    width: 100%;
-    box-sizing: border-box;
 }
 
 /* hover */
@@ -116,7 +112,7 @@ select, input {
     background: #f0f0f0;
 }
 
-/* LOGOS UNIFORMES */
+/* LOGO + ICONE MEME TAILLE */
 .legend-logo { 
     width: 22px; 
     height: 22px; 
@@ -124,16 +120,15 @@ select, input {
     border-radius: 3px; 
     background: white; 
     border: 1px solid #eee; 
-    flex-shrink: 0;
 }
 
-/* COULEUR BOX UNIFORME */
+/* couleur fallback même taille que logo */
 .legend-color-box { 
-    width: 18px; 
-    height: 18px; 
-    border-radius: 3px; 
+    display: inline-block; 
+    width: 22px; 
+    height: 22px; 
+    border-radius: 4px; 
     border: 1px solid #999; 
-    flex-shrink: 0;
 }
 
 </style>
@@ -194,8 +189,6 @@ select, input {
 
 <script>
 
-/* ================= MAP ================= */
-
 var map = L.map('map').setView([48.85, 2.35], 9);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
@@ -213,8 +206,7 @@ var markers = [];
 var villesCoords = {};
 var cercleRayon = null;
 
-/* ================= COULEURS ================= */
-
+/* 🔥 PALETTE ÉTENDUE (PLUS DE COULEURS) */
 var codesCouleurs = {
     "ATPL CASELAS": "blue",
     "BSM": "red",
@@ -245,10 +237,18 @@ var codesCouleurs = {
     "YPREMA": "black",
     "Cemex": "grey",
     "Clim plus": "orange",
-    "LARIVIERE": "blue"
-};
+    "LARIVIERE": "blue",
 
-/* ================= LOGOS ================= */
+    /* AJOUTS POUR PLUS DE VARIÉTÉ */
+    "default1": "#1abc9c",
+    "default2": "#2ecc71",
+    "default3": "#3498db",
+    "default4": "#9b59b6",
+    "default5": "#f1c40f",
+    "default6": "#e67e22",
+    "default7": "#e74c3c",
+    "default8": "#95a5a6"
+};
 
 var logosMap = {
     "Loxam": "https://loxam.com/wp-content/uploads/2022/08/logo-loxam-rental.png",
@@ -273,8 +273,6 @@ var logosMap = {
     "Clim plus": "https://assets.pyc.fr/uploads/media/image/0001/73/thumb_72064_image_article_photo.png",
     "LARIVIERE": "https://img.batiweb.com/repo-images/supplier/3422/400_300/lariviere-logo.webp"
 };
-
-/* ================= OUTIL ================= */
 
 function isValueValid(val) {
     if (!val) return false;
@@ -318,8 +316,6 @@ function getDistance(lat1, lon1, lat2, lon2) {
     return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
 
-/* ================= DATA ================= */
-
 fetch("data.csv")
 .then(r => r.text())
 .then(csv => {
@@ -327,7 +323,6 @@ fetch("data.csv")
     Papa.parse(csv, {
         header: true,
         skipEmptyLines: true,
-
         complete: function(results) {
 
             let frsSet = new Set();
@@ -348,23 +343,172 @@ fetch("data.csv")
                 let cp = row["CP"]?.trim();
                 let p = row["Produit"]?.trim() || row["Produit "]?.trim();
 
+                if (isValueValid(v)) {
+                    villeSet.add(v);
+                    if (!isNaN(latV)) {
+                        villesCoords[normalize(v)] = [latV, lngV];
+                    }
+                }
+
                 if (!isValueValid(f) || isNaN(latF) || isNaN(lngF)) return;
 
                 frsSet.add(f);
 
+                if (isValueValid(cp)) cpSet.add(cp);
+                if (isValueValid(p)) prodSet.add(p);
+
                 let color = codesCouleurs[f] || "blue";
 
-                let m = L.marker([latF, lngF], { icon: getIcon(color) })
-                .bindPopup(`${f}`);
+                let popupContent = `
+                    <div style="line-height:1.6;">
+                        <b>Fournisseur :</b> ${f}<br>
+                        <b>Adresse :</b> ${row["adresse complete"] || ""}<br>
+                        <b>Ville :</b> ${v} (${cp})<br>
+                        <b>Produit :</b> ${p}<br>
+                        <b>Email :</b>
+                        <a href="mailto:${row["Email"]}">
+                            ${row["Email"] || ""}
+                        </a>
+                    </div>
+                `;
+
+                let m = L.marker([latF, lngF], {
+                    icon: getIcon(color)
+                }).bindPopup(popupContent);
+
+                m.data = { f, v, cp, p, lat: latF, lng: lngF };
 
                 m.addTo(map);
-
                 markers.push(m);
             });
 
+            remplirSelect("filtreNom", frsSet, "Fournisseur");
+            remplirSelect("filtreVille", villeSet, "Ville");
+            remplirSelect("filtreCP", cpSet, "CP");
+            remplirSelect("filtreProduit", prodSet, "Produit");
+
+            ajouterLegendes();
         }
     });
 });
+
+function remplirSelect(id, set, label) {
+    let s = document.getElementById(id);
+    s.innerHTML = `<option value="">${label} : Tous</option>`;
+    Array.from(set).sort().forEach(v => {
+        if (isValueValid(v)) {
+            let o = document.createElement("option");
+            o.value = v;
+            o.textContent = v;
+            s.appendChild(o);
+        }
+    });
+}
+
+function ajouterLegendes(fournisseursFiltres = null) {
+
+    if (window.dynamicLegend) {
+        map.removeControl(window.dynamicLegend);
+    }
+
+    var legend = L.control({ position: 'bottomright' });
+
+    legend.onAdd = function() {
+
+        var div = L.DomUtil.create('div', 'legend');
+
+        div.innerHTML = `<b class="title" style="color:red;">Fournisseurs</b>`;
+
+        let selectFournisseur = document.getElementById("filtreNom");
+
+        let fournisseursAffiches = [];
+
+        Array.from(selectFournisseur.options).forEach(option => {
+
+            let fournisseur = option.value;
+            if (!fournisseur) return;
+
+            if (fournisseursFiltres && !fournisseursFiltres.includes(fournisseur)) return;
+
+            fournisseursAffiches.push(fournisseur);
+        });
+
+        fournisseursAffiches.sort().forEach(f => {
+
+            let iconHtml = logosMap[f]
+                ? `<img src="${logosMap[f]}" class="legend-logo"
+                    onerror="this.outerHTML='<div class=\'legend-color-box\' style=\'background:${codesCouleurs[f]}\'></div>'">`
+                : `<div class="legend-color-box" style="background:${codesCouleurs[f] || '#ccc'}"></div>`;
+
+            let span = document.createElement("span");
+            span.innerHTML = `${iconHtml} ${f}`;
+
+            span.onclick = () => {
+                document.getElementById("filtreNom").value = f;
+                filtrer();
+            };
+
+            div.appendChild(span);
+        });
+
+        return div;
+    };
+
+    legend.addTo(map);
+    window.dynamicLegend = legend;
+}
+
+function filtrer() {
+    let nom = normalize(document.getElementById("filtreNom").value);
+    let ville = normalize(document.getElementById("filtreVille").value);
+    let cp = normalize(document.getElementById("filtreCP").value);
+    let prod = normalize(document.getElementById("filtreProduit").value);
+
+    let rayon = parseFloat(document.getElementById("filtreRayon").value);
+
+    let fournisseursVisibles = new Set();
+
+    if (cercleRayon) map.removeLayer(cercleRayon);
+
+    let centre = (ville && villesCoords[ville]) ? villesCoords[ville] : null;
+
+    if (centre && rayon > 0) {
+        cercleRayon = L.circle(centre, {
+            radius: rayon * 1000,
+            color: '#333',
+            fillOpacity: 0.1,
+            weight: 1
+        }).addTo(map);
+
+        map.fitBounds(cercleRayon.getBounds());
+    }
+
+    markers.forEach(m => {
+
+        let d = m.data;
+        let match = true;
+
+        if (nom && normalize(d.f) !== nom) match = false;
+        if (cp && normalize(d.cp) !== cp) match = false;
+        if (prod && normalize(d.p) !== prod) match = false;
+
+        if (centre) {
+            let dist = getDistance(centre[0], centre[1], d.lat, d.lng);
+            if (normalize(d.v) !== ville && dist > rayon) match = false;
+        } else if (ville && normalize(d.v) !== ville) {
+            match = false;
+        }
+
+        if (match) {
+            m.addTo(map);
+            fournisseursVisibles.add(d.f);
+        } else {
+            map.removeLayer(m);
+        }
+    });
+
+    ajouterLegendes(Array.from(fournisseursVisibles));
+}
 
 </script>
 
