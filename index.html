@@ -75,56 +75,65 @@ select, input {
     gap: 10px;
 }
 
+/* ✅ LEGEND AMÉLIORÉE */
 .legend { 
     background: white; 
     padding: 10px; 
     border-radius: 8px; 
     box-shadow: 0 0 5px rgba(0,0,0,0.3); 
-    line-height: 22px; 
+    line-height: 20px; 
     max-height: 500px; 
     overflow-y: auto; 
-    width: 260px; 
-    font-size: 11px;
+    width: 280px; 
+    font-size: 12px;
 }
 
+/* TITRE */
 .legend b.title { 
     font-size: 14px; 
     display: block; 
-    margin-bottom: 8px; 
+    margin-bottom: 10px; 
     border-bottom: 2px solid #eee; 
     color: red; 
-    line-height: 1.4; 
 }
 
+/* ✅ ALIGNEMENT PROPRE + TAILLE UNIFORME */
 .legend span { 
     cursor: pointer; 
     display: flex; 
     align-items: center; 
-    gap: 8px; 
-    padding: 3px 5px; 
-    border-radius: 3px; 
-    font-weight: bold; 
+    gap: 10px; 
+    padding: 6px 6px; 
+    border-radius: 5px; 
+    font-weight: 600; 
+    font-size: 12px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
+/* hover */
 .legend span:hover {
     background: #f0f0f0;
 }
 
+/* LOGOS UNIFORMES */
 .legend-logo { 
-    width: 20px; 
-    height: 20px; 
+    width: 22px; 
+    height: 22px; 
     object-fit: contain; 
-    border-radius: 2px; 
+    border-radius: 3px; 
     background: white; 
-    border: 1px solid #f0f0f0; 
+    border: 1px solid #eee; 
+    flex-shrink: 0;
 }
 
+/* COULEUR BOX UNIFORME */
 .legend-color-box { 
-    display: inline-block; 
-    width: 16px; 
-    height: 16px; 
+    width: 18px; 
+    height: 18px; 
     border-radius: 3px; 
     border: 1px solid #999; 
+    flex-shrink: 0;
 }
 
 </style>
@@ -185,6 +194,8 @@ select, input {
 
 <script>
 
+/* ================= MAP ================= */
+
 var map = L.map('map').setView([48.85, 2.35], 9);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
@@ -201,6 +212,8 @@ L.rectangle(boundsIdF, {
 var markers = [];
 var villesCoords = {};
 var cercleRayon = null;
+
+/* ================= COULEURS ================= */
 
 var codesCouleurs = {
     "ATPL CASELAS": "blue",
@@ -235,6 +248,8 @@ var codesCouleurs = {
     "LARIVIERE": "blue"
 };
 
+/* ================= LOGOS ================= */
+
 var logosMap = {
     "Loxam": "https://loxam.com/wp-content/uploads/2022/08/logo-loxam-rental.png",
     "Point P": "Point P.png",
@@ -259,23 +274,18 @@ var logosMap = {
     "LARIVIERE": "https://img.batiweb.com/repo-images/supplier/3422/400_300/lariviere-logo.webp"
 };
 
+/* ================= OUTIL ================= */
+
 function isValueValid(val) {
-
     if (!val) return false;
-
     let v = val.toString().trim();
-
     return v !== "" && v !== "-" && v !== "null";
 }
 
 function getIcon(color) {
-
     return new L.Icon({
-
         iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png`,
-
         shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-
         iconSize: [25, 41],
         iconAnchor: [12, 41],
         popupAnchor: [1, -34],
@@ -284,7 +294,6 @@ function getIcon(color) {
 }
 
 function normalize(str) {
-
     return str
         ? str.toString()
             .normalize("NFD")
@@ -295,9 +304,7 @@ function normalize(str) {
 }
 
 function getDistance(lat1, lon1, lat2, lon2) {
-
     var R = 6371;
-
     var dLat = (lat2 - lat1) * Math.PI / 180;
     var dLon = (lon2 - lon1) * Math.PI / 180;
 
@@ -311,14 +318,13 @@ function getDistance(lat1, lon1, lat2, lon2) {
     return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
 
+/* ================= DATA ================= */
+
 fetch("data.csv")
-
 .then(r => r.text())
-
 .then(csv => {
 
     Papa.parse(csv, {
-
         header: true,
         skipEmptyLines: true,
 
@@ -342,253 +348,25 @@ fetch("data.csv")
                 let cp = row["CP"]?.trim();
                 let p = row["Produit"]?.trim() || row["Produit "]?.trim();
 
-                if (isValueValid(v)) {
-
-                    villeSet.add(v);
-
-                    if (!isNaN(latV)) {
-                        villesCoords[normalize(v)] = [latV, lngV];
-                    }
-                }
-
                 if (!isValueValid(f) || isNaN(latF) || isNaN(lngF)) return;
 
                 frsSet.add(f);
 
-                if (isValueValid(cp)) cpSet.add(cp);
-                if (isValueValid(p)) prodSet.add(p);
-
                 let color = codesCouleurs[f] || "blue";
 
-                let popupContent = `
-                    <div style="line-height:1.6;">
-                        <b>Fournisseur :</b> ${f}<br>
-                        <b>Adresse :</b> ${row["adresse complete"] || ""}<br>
-                        <b>Ville :</b> ${v} (${cp})<br>
-                        <b>Produit :</b> ${p}<br>
-                        <b>Email :</b>
-                        <a href="mailto:${row["Email"]}">
-                            ${row["Email"] || ""}
-                        </a>
-                    </div>
-                `;
-
-                let m = L.marker([latF, lngF], {
-                    icon: getIcon(color)
-                }).bindPopup(popupContent);
-
-                m.data = {
-                    f,
-                    v,
-                    cp,
-                    p,
-                    lat: latF,
-                    lng: lngF
-                };
+                let m = L.marker([latF, lngF], { icon: getIcon(color) })
+                .bindPopup(`${f}`);
 
                 m.addTo(map);
 
                 markers.push(m);
             });
 
-            remplirSelect("filtreNom", frsSet, "Fournisseur");
-            remplirSelect("filtreVille", villeSet, "Ville");
-            remplirSelect("filtreCP", cpSet, "CP");
-            remplirSelect("filtreProduit", prodSet, "Produit");
-
-            ajouterLegendes();
         }
     });
 });
 
-function remplirSelect(id, set, label) {
-
-    let s = document.getElementById(id);
-
-    s.innerHTML = `<option value="">${label} : Tous</option>`;
-
-    Array.from(set).sort().forEach(v => {
-
-        if (isValueValid(v)) {
-
-            let o = document.createElement("option");
-
-            o.value = v;
-            o.textContent = v;
-
-            s.appendChild(o);
-        }
-    });
-}
-
-/* =========================================
-   LEGENDE DYNAMIQUE + PRODUIT + CLIQUABLE
-========================================= */
-
-function ajouterLegendes(fournisseursFiltres = null) {
-
-    if (window.dynamicLegend) {
-        map.removeControl(window.dynamicLegend);
-    }
-
-    var legend = L.control({
-        position: 'bottomright'
-    });
-
-    legend.onAdd = function() {
-
-        var div = L.DomUtil.create('div', 'legend');
-
-        div.innerHTML = `
-            <b class="title" style="color:red;">
-                Fournisseurs
-            </b>
-        `;
-
-        let selectFournisseur =
-            document.getElementById("filtreNom");
-
-        let fournisseursAffiches = [];
-
-        Array.from(selectFournisseur.options).forEach(option => {
-
-            let fournisseur = option.value;
-
-            if (!fournisseur) return;
-
-            if (
-                fournisseursFiltres &&
-                !fournisseursFiltres.includes(fournisseur)
-            ) {
-                return;
-            }
-
-            fournisseursAffiches.push(fournisseur);
-        });
-
-        fournisseursAffiches.sort().forEach(f => {
-
-            let iconHtml = logosMap[f]
-
-                ? `
-                    <img src="${logosMap[f]}"
-                    class="legend-logo"
-                    onerror="this.outerHTML='<div class=\'legend-color-box\' style=\'background:${codesCouleurs[f]}\'></div>'">
-                  `
-
-                : `
-                    <div class="legend-color-box"
-                    style="background:${codesCouleurs[f] || '#ccc'}"></div>
-                  `;
-
-            let span = document.createElement("span");
-
-            span.innerHTML = `${iconHtml} ${f}`;
-
-            span.onclick = () => {
-
-                document.getElementById("filtreNom").value = f;
-
-                filtrer();
-            };
-
-            div.appendChild(span);
-        });
-
-        return div;
-    };
-
-    legend.addTo(map);
-
-    window.dynamicLegend = legend;
-}
-
-function filtrer() {
-
-    let nom = normalize(document.getElementById("filtreNom").value);
-    let ville = normalize(document.getElementById("filtreVille").value);
-    let cp = normalize(document.getElementById("filtreCP").value);
-    let prod = normalize(document.getElementById("filtreProduit").value);
-
-    let rayon = parseFloat(document.getElementById("filtreRayon").value);
-
-    let fournisseursVisibles = new Set();
-
-    if (cercleRayon) {
-        map.removeLayer(cercleRayon);
-    }
-
-    let centre =
-        (ville && villesCoords[ville])
-        ? villesCoords[ville]
-        : null;
-
-    if (centre && rayon > 0) {
-
-        cercleRayon = L.circle(centre, {
-            radius: rayon * 1000,
-            color: '#333',
-            fillOpacity: 0.1,
-            weight: 1
-        }).addTo(map);
-
-        map.fitBounds(cercleRayon.getBounds());
-    }
-
-    markers.forEach(m => {
-
-        let d = m.data;
-
-        let match = true;
-
-        if (nom && normalize(d.f) !== nom) {
-            match = false;
-        }
-
-        if (cp && normalize(d.cp) !== cp) {
-            match = false;
-        }
-
-        if (prod && normalize(d.p) !== prod) {
-            match = false;
-        }
-
-        if (centre) {
-
-            let dist = getDistance(
-                centre[0],
-                centre[1],
-                d.lat,
-                d.lng
-            );
-
-            if (normalize(d.v) !== ville && dist > rayon) {
-                match = false;
-            }
-
-        } else if (ville && normalize(d.v) !== ville) {
-
-            match = false;
-        }
-
-        if (match) {
-
-            m.addTo(map);
-
-            fournisseursVisibles.add(d.f);
-
-        } else {
-
-            map.removeLayer(m);
-        }
-    });
-
-    // Mise à jour automatique de la légende
-    ajouterLegendes(Array.from(fournisseursVisibles));
-}
-
 </script>
 
 </body>
-
 </html>
